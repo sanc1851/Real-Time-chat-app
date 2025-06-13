@@ -1,30 +1,66 @@
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
+const http = require("http");
+const { Server } = require("socket.io");
 const userRoute = require("./Routes/userRoute");
 const chatRoute = require("./Routes/chatRoute");
 const messageRoute = require("./Routes/messageRoute");
-const app = express();
 require("dotenv").config();
 
+const app = express();
+const server = http.createServer(app);
+
+// ⚠️ REPLACE with your actual frontend Render link
+const FRONTEND_URL = "https://frontend.onrender.com";
+
+const io = new Server(server, {
+  cors: {
+    origin: FRONTEND_URL,
+    methods: ["GET", "POST"]
+  }
+});
+
+// Middleware
 app.use(express.json());
-app.use(cors());
-app.use("/api/users",userRoute);
-app.use("/api/chats",chatRoute);
-app.use("/api/messages",messageRoute);
+app.use(cors({
+  origin: FRONTEND_URL,
+  methods: ["GET", "POST"]
+}));
 
-const port = process.env.PORT || 8080;
-const uri = process.env.ATLAS_URI;
+// Routes
+app.use("/api/users", userRoute);
+app.use("/api/chats", chatRoute);
+app.use("/api/messages", messageRoute);
 
+// Socket.IO logic
+io.on("connection", (socket) => {
+  console.log("Socket connected:", socket.id);
+
+  socket.on("send_message", (data) => {
+    socket.broadcast.emit("receive_message", data);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+  });
+});
+
+// Home route
 app.get("/", (req, res) => {
-    res.send("Welcome to Chat App APIs...");
-})
+  res.send("Welcome to Chat App APIs...");
+});
 
-app.listen(port, (req, res) => {
-    console.log(`Listening on port... : ${port}`);
-})
+// Start server
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
-mongoose.connect(uri,{
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-}).then(() => console.log("MongoDB connection established")).catch((error) => console.log("MongoDB connection failed: ",error.message))
+// MongoDB
+mongoose.connect(process.env.ATLAS_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log("MongoDB connection established"))
+.catch((error) => console.log("MongoDB connection failed: ", error.message));
