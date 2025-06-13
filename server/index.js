@@ -12,7 +12,7 @@ const app = express();
 const server = http.createServer(app);
 
 // ⚠️ REPLACE with your actual frontend Render link
-const FRONTEND_URL = "https://frontend.onrender.com";
+const FRONTEND_URL = "https://frontend-r1el.onrender.com";
 
 const io = new Server(server, {
   cors: {
